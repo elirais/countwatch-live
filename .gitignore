@@ -1,0 +1,7 @@
+node_modules/
+.wrangler/
+.dev.vars
+import-result.json
+.countwatch.env
+.mcp.json
+.history/
