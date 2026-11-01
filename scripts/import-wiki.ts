@@ -13,7 +13,7 @@ import { parseArgs } from "node:util";
 import { BUCKET_MS } from "../src/config.ts";
 import { bucketOf } from "../src/count.ts";
 import { coveredStart, type ImportWatch, watchesOf, WIKIS } from "../src/history.ts";
-import { fetchWikiHistory, type Io, sendImport, waitForImport } from "../src/history-run.ts";
+import { fetchWikiHistory, type ImportStatus, type Io, sendImport, splitImport, waitForImport } from "../src/history-run.ts";
 
 const { values } = parseArgs({ options: { days: { type: "string", default: "30" }, wikis: { type: "string" }, "dry-run": { type: "boolean", default: false }, refetch: { type: "boolean", default: false } } });
 const days = Number(values.days);
@@ -63,11 +63,18 @@ const key = apiKey();
 if (!key) throw new Error("No COUNTWATCH_API_KEY (environment or .countwatch.env). Run `npx countwatch init` signed in as the showcase account.");
 const api = { url: process.env.COUNTWATCH_API_URL ?? "https://api.countwatch.com", key };
 
-const sent = await sendImport(api, watches, io);
-console.log(`Import ${sent.import_id}: ${sent.stored.length} watches stored, ${sent.rejected.length} refused`);
-if (sent.rejected.length) console.log(JSON.stringify(sent.rejected, null, 2));
-const done = await waitForImport(api, sent.import_id, io);
-writeFileSync("import-result.json", JSON.stringify(done, null, 2));
+// One request when it fits (2 MB, 1,000 watch-days); else whole watches per request, each with its own Idempotency-Key.
+const parts = splitImport(watches);
+if (parts.length > 1) console.log(`Sending ${parts.length} imports (CountWatch takes up to 2 MB and 1,000 watch-days per request)`);
+const results: ImportStatus[] = [];
+for (const part of parts) {
+  const sent = await sendImport(api, part, io);
+  console.log(`Import ${sent.import_id}: ${sent.stored.length} watches stored, ${sent.rejected.length} refused`);
+  if (sent.rejected.length) console.log(JSON.stringify(sent.rejected, null, 2));
+  results.push(await waitForImport(api, sent.import_id, io));
+}
+const done = { ...results[0]!, watches: results.flatMap((r) => r.watches) };
+writeFileSync("import-result.json", JSON.stringify(results.length === 1 ? results[0] : results, null, 2));
 console.log("\nWhat CountWatch learned (full answer in import-result.json):");
 for (const w of done.watches) {
   const r = w.replay;

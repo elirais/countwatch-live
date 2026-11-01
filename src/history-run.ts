@@ -56,6 +56,32 @@ export interface CountWatchApi {
   key: string;
 }
 
+/** CountWatch refuses an import body over 2 MB (413) and over 1,000 watch-days per request: the watches split into
+ * requests that fit both, whole watches only, in order. */
+export const IMPORT_MAX_BYTES = 2 * 1024 * 1024;
+export const IMPORT_MAX_WATCH_DAYS = 1000;
+export function splitImport(watches: ImportWatch[], maxBytes = IMPORT_MAX_BYTES - 64 * 1024, maxWatchDays = IMPORT_MAX_WATCH_DAYS): ImportWatch[][] {
+  const out: ImportWatch[][] = [];
+  let cur: ImportWatch[] = [];
+  let bytes = 0;
+  let days = 0;
+  for (const w of watches) {
+    const b = JSON.stringify(w).length + 1;
+    const d = Math.ceil(w.counts.length / 288);
+    if (cur.length && (bytes + b > maxBytes || days + d > maxWatchDays)) {
+      out.push(cur);
+      cur = [];
+      bytes = 0;
+      days = 0;
+    }
+    cur.push(w);
+    bytes += b;
+    days += d;
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
 /** POST /v1/import; returns the parsed 202 body, or throws with CountWatch's own problem text. */
 export async function sendImport(api: CountWatchApi, watches: ImportWatch[], io: Io): Promise<{ import_id: string; stored: { index: number; watch_id: string }[]; rejected: unknown[] }> {
   const body = JSON.stringify({ watches, recipe: "import" });

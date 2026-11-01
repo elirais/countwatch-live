@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fetchWikiHistory, type Io, sendImport, waitForImport } from "../src/history-run.ts";
+import { fetchWikiHistory, type Io, sendImport, splitImport, waitForImport } from "../src/history-run.ts";
 
 const T = (s: string) => Date.parse(`2026-10-02T${s}Z`);
 const json = (o: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json", ...headers } });
@@ -74,5 +74,20 @@ describe("sendImport and waitForImport", () => {
     const x = io([st("replay_pending", 0), st("replaying", 7), st("done", 20)]);
     expect((await waitForImport(api, "imp_1", x)).status).toBe("done");
     expect(x.lines).toEqual(["import imp_1: replay_pending 0/20", "import imp_1: replaying 7/20", "import imp_1: done 20/20"]);
+  });
+});
+
+describe("splitImport", () => {
+  const w = (wiki: string, days: number) => ({ metric: "wiki_edits", tags: { wiki, editor: "human" }, start: "2026-10-02T21:00:00.000Z", resolution: "5m" as const, counts: Array.from({ length: days * 288 }, () => 123) });
+  it("keeps 20 watches × 30 days in one request when it fits", () => {
+    const all = Array.from({ length: 20 }, (_, i) => w(`w${i}`, 30));
+    expect(JSON.stringify({ watches: all }).length).toBeLessThan(2 * 1024 * 1024);
+    expect(splitImport(all)).toHaveLength(1);
+  });
+  it("splits by whole watches when a request would pass the bytes or the watch-days", () => {
+    const all = Array.from({ length: 4 }, (_, i) => w(`w${i}`, 30));
+    const bySize = splitImport(all, JSON.stringify(all[0]).length * 2 + 10);
+    expect(bySize.map((p) => p.length)).toEqual([2, 2]);
+    expect(splitImport(all, 10_000_000, 60).map((p) => p.length)).toEqual([2, 2]);
   });
 });
