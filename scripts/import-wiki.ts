@@ -4,18 +4,18 @@
 //
 //   npm run import:wiki -- --dry-run      fetch and count only, send nothing
 //   npm run import:wiki                   fetch, send, wait for the replay, print what CountWatch learned
-//   options: --days 30, --wikis enwiki,hewiki
+//   options: --days 30, --wikis enwiki,hewiki, --refetch (ignore the counts saved in .history/)
 //
 // The key: COUNTWATCH_API_KEY in the environment, else in .countwatch.env (what `npx countwatch init` writes). A write
 // key of the showcase account. Never printed.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { BUCKET_MS } from "../src/config.ts";
 import { bucketOf } from "../src/count.ts";
 import { coveredStart, type ImportWatch, watchesOf, WIKIS } from "../src/history.ts";
 import { fetchWikiHistory, type Io, sendImport, waitForImport } from "../src/history-run.ts";
 
-const { values } = parseArgs({ options: { days: { type: "string", default: "30" }, wikis: { type: "string" }, "dry-run": { type: "boolean", default: false } } });
+const { values } = parseArgs({ options: { days: { type: "string", default: "30" }, wikis: { type: "string" }, "dry-run": { type: "boolean", default: false }, refetch: { type: "boolean", default: false } } });
 const days = Number(values.days);
 if (!(days > 0 && days <= 90)) throw new Error("--days: 1 to 90 (CountWatch imports up to 90 days)");
 const wikis = values.wikis ? values.wikis.split(",") : [...WIKIS];
@@ -33,16 +33,26 @@ const end = bucketOf(Date.now()); // the open window is left to the live reader
 const from = end - days * 86_400_000;
 console.log(`Fetching ${days} days (${new Date(from).toISOString()} → ${new Date(end).toISOString()}) for ${wikis.join(", ")}`);
 
+// Each wiki's counts are saved in .history/ as soon as they are fetched: a later run (the real one after a dry run, or
+// a run after Ctrl+C) reuses them instead of fetching for an hour again. --refetch ignores the saved ones.
+type Saved = { from: number; end: number; first: number | null; pages: number; changes: number; counts: [string, number][] };
+mkdirSync(".history", { recursive: true });
+const savedPath = (wiki: string) => `.history/${wiki}-${days}d.json`;
 const watches: ImportWatch[] = [];
 for (const wiki of wikis) {
   const t0 = Date.now();
-  const h = await fetchWikiHistory(wiki, from, end, io);
-  const start = coveredStart(from, h.first);
-  const ws = watchesOf(wiki, h.counts, start, end);
+  // Saved counts still join the live data: the live reader has sent every window since it started, and CountWatch stops
+  // an import at a watch's first live window.
+  const saved: Saved | null = !values.refetch && existsSync(savedPath(wiki)) ? (JSON.parse(readFileSync(savedPath(wiki), "utf8")) as Saved) : null;
+  const h = saved ? { ...saved, counts: new Map(saved.counts) } : { from, end, ...(await fetchWikiHistory(wiki, from, end, io)) };
+  if (!saved) writeFileSync(savedPath(wiki), JSON.stringify({ from: h.from, end: h.end, first: h.first, pages: h.pages, changes: h.changes, counts: [...h.counts] } satisfies Saved));
+  else console.log(`${wiki}: using the counts saved at ${new Date(saved.end).toISOString()} (--refetch to fetch again)`);
+  const start = coveredStart(h.from, h.first);
+  const ws = watchesOf(wiki, h.counts, start, h.end);
   watches.push(...ws);
   const sum = (w: ImportWatch) => w.counts.reduce((a, b) => a + b, 0);
   console.log(`${wiki}: ${h.changes.toLocaleString("en-US")} changes in ${h.pages} pages (${Math.round((Date.now() - t0) / 1000)} s); from ${new Date(start).toISOString()}; human ${sum(ws[0]!).toLocaleString("en-US")}, bot ${sum(ws[1]!).toLocaleString("en-US")}`);
-  if (start > from + BUCKET_MS) console.log(`  note: ${wiki} keeps history only from ${new Date(start).toISOString()}`);
+  if (start > h.from + BUCKET_MS) console.log(`  note: ${wiki} keeps history only from ${new Date(start).toISOString()}`);
 }
 
 if (values["dry-run"]) {

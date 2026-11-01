@@ -4,3 +4,4 @@ node_modules/
 import-result.json
 .countwatch.env
 .mcp.json
+.history/
