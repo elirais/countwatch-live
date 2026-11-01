@@ -17,4 +17,21 @@ becomes a Magnum task; the showcase does not work around the product.
    The showcase sends only closed windows. If partial windows are safe, the guide should say so; if not, it should
    warn.
 
+4. **`countwatch init` approves the key for whichever account the browser is signed in to, without asking.** The
+   founder ran `npx countwatch init --print | npx wrangler secret put COUNTWATCH_API_KEY` for the showcase account; the
+   approval page opened in the default browser (signed in as the founder) and the key went to the founder's account
+   (`acc_e86c…`, not the showcase `acc_4155…`). Nothing on the approval page or in the terminal asked which account.
+   Proposed: the approval page names the account in large type and offers "Use another account"; `init` prints the
+   account name before it finishes, and with `--print` refuses to go on if the answer's account differs from an
+   `--account` the person passed.
+5. **`init --print` wrote `.mcp.json` into the showcase folder** (`"mcp_config": {"changed": true}`), although
+   `--print` is meant only for a host's secrets. A file the person did not ask for, easy to commit by mistake. Proposed:
+   `--print` changes no files.
+6. **The `next` list mixes the account's old setup notices into a key request.** For a new key it listed 10 lines about
+   other senders, Webhook URLs and groups. One line reads "The API key an API key has been silent 6 days" (a doubled
+   name: a text bug).
+7. **The docs' `--print | wrangler secret put` line fails quietly for a Worker that does not exist yet.** Wrangler asked
+   "create a new Worker?" and, with the key on stdin, took its fallback "yes" and made an empty Worker. It worked here by
+   luck. Proposed: the recipe says "deploy first" (or `wrangler secret put` after the first `wrangler deploy`).
+
 (To be completed after the first live day: anything seen on countwatch.com, in alerts or in the API answers.)
