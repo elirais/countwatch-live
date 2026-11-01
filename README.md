@@ -17,6 +17,13 @@ product end to end and the source of the charts we post. Decisions: ADR 0066 in 
 - A cron every 5 minutes re-arms the reader's alarm if it is missing.
 - `GET /status` shows the stream position, the last read and the last flush. It shows no counts and no secrets.
 
+- **Wikipedia history (SR-2).** `npm run import:wiki` fetches the last 30 days of the same 20 watches from each
+  wiki's recent-changes API (one request at a time, as Wikimedia asks; about an hour) and imports them with
+  `POST /v1/import` (5-minute counts, zeros included). It waits for CountWatch's replay and prints the rules chosen and
+  the past alerts per watch (full answer in `import-result.json`). Start with `npm run import:wiki -- --dry-run`.
+  It runs on your own computer and needs a write key of the showcase account in `COUNTWATCH_API_KEY` or
+  `.countwatch.env`.
+
 ## Set up (once)
 
 1. Showcase account on countwatch.com (Pro). Its sign-in address goes in CountWatch's `INTERNAL_EMAILS` secret, not in

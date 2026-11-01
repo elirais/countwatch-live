@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "types": "wrangler types --include-runtime",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "import:wiki": "node --experimental-strip-types --no-warnings scripts/import-wiki.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
