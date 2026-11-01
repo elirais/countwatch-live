@@ -34,4 +34,16 @@ becomes a Magnum task; the showcase does not work around the product.
    "create a new Worker?" and, with the key on stdin, took its fallback "yes" and made an empty Worker. It worked here by
    luck. Proposed: the recipe says "deploy first" (or `wrangler secret put` after the first `wrangler deploy`).
 
-(To be completed after the first live day: anything seen on countwatch.com, in alerts or in the API answers.)
+8. **`countwatch init` creates `.gitignore` and `.mcp.json` in whatever branch is checked out.** Run on `main` (which
+   had no `.gitignore`), it created one; switching to the work branch then failed ("untracked working tree files would
+   be overwritten: .gitignore") until the founder deleted it. Proposed: `init` asks before creating files, and prints
+   which files it created or changed.
+
+## SR-2 (Wikipedia history)
+
+Expectations written before reading the docs, and the docs' gaps, are in `docs/sr2-client-expectations.md`. The gaps a
+customer meets in the guide's "Importing history": nothing on what happens to windows the live sender already sent
+(the import stops at the first live window: only SPEC says so); nothing on running an import twice or on
+`Idempotency-Key`; nothing on learning ending after an import; no copy-paste example.
+
+(To be completed after the first live day and the import run: anything seen on countwatch.com, in alerts or in the API answers.)
