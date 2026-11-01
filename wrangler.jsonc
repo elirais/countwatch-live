@@ -1,0 +1,20 @@
+{
+  // CountWatch Live (ADR 0066, elirais/Magnum): reads public streams, sends 5-minute counts to CountWatch.
+  "name": "countwatch-live",
+  // The same Cloudflare account as CountWatch (elirais/Magnum wrangler.json).
+  "account_id": "e57e4592ed6161095794414f89bbb29e",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-15",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  // Every 5 minutes: re-arm the reader's alarm if it is missing (the alarm does the work).
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "durable_objects": { "bindings": [{ "name": "WIKI", "class_name": "WikiReader" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["WikiReader"] }],
+  "vars": { "COUNTWATCH_API_URL": "https://api.countwatch.com" },
+  // One read parses a few minutes of the whole Wikimedia stream; 30 s CPU (the default) may be tight.
+  "limits": { "cpu_ms": 120000 },
+  "observability": { "enabled": true }
+  // Secret (wrangler secret put): COUNTWATCH_API_KEY, a write key of the showcase account.
+}

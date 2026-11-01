@@ -1,0 +1,19 @@
+{
+  "name": "countwatch-live",
+  "private": true,
+  "type": "module",
+  "description": "CountWatch Live: public data watched by CountWatch as a customer (ADR 0066 in elirais/Magnum).",
+  "scripts": {
+    "check": "npm run typecheck && npm test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "types": "wrangler types --include-runtime",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "4.151.0"
+  }
+}
