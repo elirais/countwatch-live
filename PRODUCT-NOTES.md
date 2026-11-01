@@ -1,5 +1,8 @@
 # Product notes
 
+Status (2 Nov): notes 2 (wording only), 4, 5, 6, 7, 8 and the SR-2 guide gaps are fixed in elirais/Magnum #87
+(ADR 0067: ONB-1, ONB-2, ONB-4, ONB-6); note 1 in #88 (ONB-5, waits for the client release); note 3 stays open.
+
 What in CountWatch got in the way while building the showcase (ADR 0066 #1 in `elirais/Magnum`). Each real note
 becomes a Magnum task; the showcase does not work around the product.
 
@@ -46,4 +49,8 @@ customer meets in the guide's "Importing history": nothing on what happens to wi
 (the import stops at the first live window: only SPEC says so); nothing on running an import twice or on
 `Idempotency-Key`; nothing on learning ending after an import; no copy-paste example.
 
-(To be completed after the first live day and the import run: anything seen on countwatch.com, in alerts or in the API answers.)
+- **Recent changes keep exactly 30 days.** Fetching `enwiki` took 84 minutes (5.05 million changes), so later wikis'
+  30-day windows had moved: `dewiki` and `frwiki` history starts about 1.5 hours later than `enwiki`'s. Not a
+  CountWatch issue; the script keeps those windows missing, not zero.
+
+(To be completed after the import run: anything seen on countwatch.com, in alerts or in the API answers.)
