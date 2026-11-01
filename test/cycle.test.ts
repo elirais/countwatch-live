@@ -111,6 +111,13 @@ describe("runCycle", () => {
     expect([...ts].every((t) => Date.parse(t) + 300_000 <= T("09:59:00"))).toBe(true);
   });
 
+  it("ignores an event stamped in the future, so no unfinished window is sent", async () => {
+    const { deps, seen } = world(T("10:00:40"), [edit("a1", "09:54:00") + edit("a2", "10:05:02") + edit("bad", "11:30:00")]);
+    const s = await runCycle(emptyState(), deps);
+    expect(s.lastEventAt).toBe(T("10:05:02"));
+    expect(seen.posts[0]!.points.every((p) => Date.parse(p.ts) <= T("10:00:00"))).toBe(true);
+  });
+
   it("without an API key it sends nothing and says why", async () => {
     const { deps, seen } = world(T("10:00:40"), [edit("a1", "09:54:00") + edit("a2", "10:05:02")], null);
     const s = await runCycle(emptyState(), deps);

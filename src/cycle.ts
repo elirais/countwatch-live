@@ -58,7 +58,8 @@ export async function runCycle(prev: ReaderState, deps: Deps): Promise<ReaderSta
           read.events++;
           if (ev.id) s.lastEventId = ev.id;
           const c = classify(ev.data);
-          if (!c) continue;
+          // An event stamped in the future (a bad clock upstream) must not move the position past what has happened.
+          if (!c || c.at > deps.now() + 60_000) continue;
           if (firstOfConnection) {
             firstOfConnection = false;
             // First start, or the stream did not resume where it stopped: the time between is unknown, not zero.
