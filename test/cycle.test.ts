@@ -27,6 +27,8 @@ function world(start: number, streams: (string | number)[], apiKey: string | nul
           return new Response("");
         }
         if (typeof next === "number") return new Response("down", { status: next });
+        // Reading the stream takes the cycle: the clock is at the read's end when its events have been read.
+        clock = readDeadline(start);
         return new Response(next, { headers: { "content-type": "text/event-stream" } });
       }
       expect(url).toBe("https://api.countwatch.test/v1/ingest");
